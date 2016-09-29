@@ -5,21 +5,23 @@ import os.path
 import cv2
 import numpy as np
 
-from bisect import bisect
+from bisect import bisect_left
 
 
 def weighted_autocontrast(src_path, dst_path, white_perc, black_perc):
     img = cv2.imread(src_path, 0)
     assert img is not None
 
-    hist = cv2.calcHist([img], [0], None, [256], [0, 256]).flatten()
+    img.astype(dtype='uint8', copy=False)
+
+    hist = cv2.calcHist([img], [0], np.ones(shape=img.shape, dtype='uint8'), [256], [0, 256]).flatten()
 
     cv2.normalize(hist, hist, norm_type=cv2.NORM_L1)
 
     w = np.cumsum(hist) - 0.5 * hist
 
-    black_perc_val = min(255, bisect(np.cumsum(hist), float(black_perc)))
-    white_perc_val = max(0, 255 - bisect(np.cumsum(reversed(hist)), float(white_perc)))
+    black_perc_val = min(255, bisect_left(np.cumsum(hist), float(black_perc)))
+    white_perc_val = max(0, 255 - bisect_left(np.cumsum(hist[::-1]), float(white_perc)))
 
     def elem_weighted_autocontrast(val):
         if black_perc_val < white_perc_val:
